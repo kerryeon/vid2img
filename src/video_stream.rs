@@ -1,4 +1,4 @@
-use gst::gst_element_error;
+use gst::element_error;
 use gst::prelude::*;
 use gstreamer as gst;
 use gstreamer_app as gst_app;
@@ -60,7 +60,7 @@ impl IntoIterator for VideoStream {
 
         // Get access to the appsink element.
         let appsink = pipeline
-            .get_by_name("sink")
+            .by_name("sink")
             .expect("Sink element not found")
             .downcast::<gst_app::AppSink>()
             .expect("Sink element is expected to be an appsink!");
@@ -73,8 +73,8 @@ impl IntoIterator for VideoStream {
                 .new_sample(move |appsink| {
                     // Pull the sample in question out of the appsink's buffer.
                     let sample = appsink.pull_sample().map_err(|_| gst::FlowError::Eos)?;
-                    let buffer_ref = sample.get_buffer().ok_or_else(|| {
-                        gst_element_error!(
+                    let buffer_ref = sample.buffer().ok_or_else(|| {
+                        element_error!(
                             appsink,
                             gst::ResourceError::Failed,
                             ("Failed to get buffer from appsink")
@@ -95,7 +95,7 @@ impl IntoIterator for VideoStream {
                     // So mapping the buffer makes the underlying memory region accessible to us.
                     // See: https://gstreamer.freedesktop.org/documentation/plugin-development/advanced/allocation.html
                     let buffer = buffer_ref.map_readable().map_err(|_| {
-                        gst_element_error!(
+                        element_error!(
                             appsink,
                             gst::ResourceError::Failed,
                             ("Failed to map buffer readable")
@@ -125,7 +125,7 @@ impl IntoIterator for VideoStream {
         );
 
         let bus = pipeline
-            .get_bus()
+            .bus()
             .expect("Pipeline without bus. Shouldn't happen!");
 
         pipeline
@@ -170,12 +170,12 @@ impl Iterator for VideoStreamIterator {
                         MessageView::Error(err) => {
                             let error_msg = GstErrorMessage {
                                 src: msg
-                                    .get_src()
-                                    .map(|s| String::from(s.get_path_string()))
+                                    .src()
+                                    .map(|s| String::from(s.path_string()))
                                     .unwrap_or_else(|| String::from("None")),
-                                error: err.get_error().to_string(),
-                                debug: err.get_debug(),
-                                source: err.get_error(),
+                                error: err.error().to_string(),
+                                debug: err.debug(),
+                                source: err.error(),
                             };
                             return Some(Err(StreamError::GstError(error_msg)));
                         }
